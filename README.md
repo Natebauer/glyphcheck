@@ -1,0 +1,2 @@
+# glyphcheck
+Typeface Comparison utility
