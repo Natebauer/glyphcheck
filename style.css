@@ -344,12 +344,6 @@ input[type="range"].slider::-webkit-slider-thumb:hover { transform: scale(1.2); 
   align-items: center;
   gap: 10px;
 }
-.font-dot {
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  flex-shrink: 0;
-}
 .font-cell-info { flex: 1; min-width: 0; }
 .font-cell-name {
   font-size: 13px;
@@ -427,14 +421,18 @@ tr:hover .remove-row-btn { opacity: 1; }
 .sentence-section.dark-bg .sentence-row { border-color: #242424; }
 .sentence-row:last-child { border-bottom: none; }
 
-.sentence-dot {
-  width: 6px;
-  height: 6px;
-  border-radius: 50%;
+.sentence-label {
+  font-family: var(--font-ui);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--text-light);
+  white-space: nowrap;
+  min-width: 130px;
   flex-shrink: 0;
-  position: relative;
-  top: 1px;
 }
+.sentence-section.dark-bg .sentence-label { color: #555; }
 .sentence-text {
   font-size: 15px;
   line-height: 1.55;
@@ -463,6 +461,55 @@ tr:hover .remove-row-btn { opacity: 1; }
 }
 .specimen-left { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
 .specimen-meta { font-size: 13px; color: var(--text-muted); }
+
+.font-picker {
+  position: relative;
+}
+.font-picker-input {
+  border: 1px solid var(--border);
+  background: var(--surface);
+  padding: 7px 32px 7px 12px;
+  border-radius: 8px;
+  font-size: 13px;
+  font-family: var(--sans);
+  color: var(--text);
+  outline: none;
+  transition: border-color 0.15s;
+  width: 220px;
+  cursor: pointer;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%23888'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 10px center;
+}
+.font-picker-input:focus { border-color: var(--text); cursor: text; }
+.font-picker-dropdown {
+  display: none;
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  min-width: 100%;
+  max-height: 280px;
+  overflow-y: auto;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.1);
+  z-index: 200;
+}
+.font-picker-dropdown.is-open { display: block; }
+.font-picker-item {
+  height: 32px;
+  line-height: 32px;
+  padding: 0 12px;
+  font-size: 13px;
+  font-family: var(--sans);
+  color: var(--text);
+  cursor: pointer;
+  white-space: nowrap;
+  box-sizing: border-box;
+}
+.font-picker-item:hover { background: var(--bg); }
+.font-picker-item.is-selected { font-weight: 600; }
 
 .specimen-block {
   margin-bottom: 40px;

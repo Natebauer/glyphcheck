@@ -1954,8 +1954,6 @@ const COMPARE_COLS = [
 
 const SENTENCE = 'The delivery arrived at 1100 Illinois Ave on October 10th.';
 
-const DOT_COLORS = ['#d95f5f', '#4f7fd9', '#52b07a', '#d99b3a', '#9952d9', '#3ac4d9'];
-
 /* ============================================================
    STATE
    ============================================================ */
@@ -2059,14 +2057,12 @@ function renderCompare() {
 
   const rows = fonts.length
     ? fonts.map((font, i) => {
-        const color = DOT_COLORS[i % DOT_COLORS.length];
         const cells = COMPARE_COLS.map(c =>
           `<td><span class="glyph" style="font-family:${fontFamily(font.name)};font-size:${size}px">${h(c.sample)}</span></td>`
         ).join('');
         return `<tr>
           <td>
             <div class="font-cell">
-              <span class="font-dot" style="background:${color}"></span>
               <div class="font-cell-info">
                 <div class="font-cell-name">${h(font.name)}</div>
                 <div class="font-cell-cat">${h(font.category)}</div>
@@ -2083,10 +2079,9 @@ function renderCompare() {
         </div>
       </td></tr>`;
 
-  const sentences = fonts.map((font, i) => {
-    const color = DOT_COLORS[i % DOT_COLORS.length];
+  const sentences = fonts.map((font) => {
     return `<div class="sentence-row">
-      <span class="sentence-dot" style="background:${color}"></span>
+      <span class="sentence-label">${h(font.name)}</span>
       <span class="sentence-text" style="font-family:${fontFamily(font.name)}">${h(SENTENCE)}</span>
     </div>`;
   }).join('');
@@ -2160,10 +2155,6 @@ function renderSpecimens() {
   const fontMeta = GOOGLE_FONTS.find(f => f.name === font) || { styles: 1, category: 'Sans-Serif' };
   const ff = fontFamily(font);
 
-  const fontOptions = GOOGLE_FONTS
-    .map(f => `<option value="${h(f.name)}" ${f.name === font ? 'selected' : ''}>${h(f.name)}</option>`)
-    .join('');
-
   const pangramSizes = [12, 16, 20, 28, 40, 60, 80];
   const pangramLines = pangramSizes.map(s =>
     `<div class="pramp" style="font-family:${ff};font-size:${s}px;line-height:1.25;color:var(--text)">The quick brown fox jumps over the lazy dog.</div>`
@@ -2190,7 +2181,11 @@ function renderSpecimens() {
 
     <div class="specimen-header-row">
       <div class="specimen-left">
-        <select class="styled" id="specimenFontSel">${fontOptions}</select>
+        <div class="font-picker" id="specimenFontPicker">
+          <input type="text" class="font-picker-input" id="specimenFontInput"
+                 value="${h(font)}" autocomplete="off" spellcheck="false" placeholder="Search fonts…">
+          <div class="font-picker-dropdown" id="specimenFontDropdown"></div>
+        </div>
         <span class="specimen-meta">${h(fontMeta.category)} — ${fontMeta.styles} ${fontMeta.styles === 1 ? 'style' : 'styles'} available</span>
       </div>
       <select class="styled" id="specimenSizeSel">
@@ -2229,11 +2224,74 @@ function renderSpecimens() {
 }
 
 function bindSpecimens() {
-  document.getElementById('specimenFontSel')?.addEventListener('change', e => {
-    state.specimen.font = e.target.value;
-    loadFont(e.target.value);
+  const input    = document.getElementById('specimenFontInput');
+  const dropdown = document.getElementById('specimenFontDropdown');
+
+  const allNames = GOOGLE_FONTS.map(f => f.name);
+  const ITEM_H   = 32; // must match CSS height of .font-picker-item
+  const VISIBLE  = Math.ceil(280 / ITEM_H) + 6; // render buffer beyond viewport
+
+  function renderSlice() {
+    const matches = dropdown._matches || [];
+    const inner   = dropdown._inner;
+    if (!inner) return;
+    const start = Math.max(0, Math.floor(dropdown.scrollTop / ITEM_H) - 3);
+    const end   = Math.min(matches.length, start + VISIBLE);
+    inner.innerHTML = '';
+    for (let i = start; i < end; i++) {
+      const n  = matches[i];
+      const el = document.createElement('div');
+      el.className    = 'font-picker-item' + (n === state.specimen.font ? ' is-selected' : '');
+      el.dataset.font = n;
+      el.textContent  = n;
+      el.style.cssText = `position:absolute;top:${i * ITEM_H}px;left:0;right:0`;
+      inner.appendChild(el);
+    }
+  }
+
+  function showDropdown(filter) {
+    const q       = filter.trim().toLowerCase();
+    const matches = q ? allNames.filter(n => n.toLowerCase().includes(q)) : allNames;
+    dropdown._matches = matches;
+    dropdown.innerHTML = `<div style="position:relative;height:${matches.length * ITEM_H}px"></div>`;
+    dropdown._inner    = dropdown.firstElementChild;
+    // Scroll to selected font when opening unfiltered
+    if (!q) {
+      const idx = matches.indexOf(state.specimen.font);
+      if (idx >= 0) dropdown.scrollTop = Math.max(0, idx * ITEM_H - 120);
+    } else {
+      dropdown.scrollTop = 0;
+    }
+    renderSlice();
+    dropdown.classList.add('is-open');
+  }
+
+  function hideDropdown() {
+    dropdown.classList.remove('is-open');
+    input.value = state.specimen.font;
+  }
+
+  dropdown.addEventListener('scroll', renderSlice);
+
+  input.addEventListener('focus', () => {
+    input.select();
+    showDropdown('');
+  });
+  input.addEventListener('input', () => showDropdown(input.value));
+
+  // mousedown fires before blur so we can capture the click
+  dropdown.addEventListener('mousedown', e => {
+    const item = e.target.closest('.font-picker-item');
+    if (!item) return;
+    e.preventDefault();
+    const name = item.dataset.font;
+    state.specimen.font = name;
+    loadFont(name);
     render();
   });
+
+  input.addEventListener('blur', () => hideDropdown());
+
   document.getElementById('specimenSizeSel')?.addEventListener('change', e => {
     state.specimen.size = +e.target.value;
     render();
