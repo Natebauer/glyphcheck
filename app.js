@@ -1979,6 +1979,7 @@ const state = {
     search: '',
     category: 'All',
     sort: 'A–Z',
+    page: 1,
   },
   loaded: new Set(),
 };
@@ -2242,8 +2243,10 @@ function bindSpecimens() {
 /* ============================================================
    GOOGLE FONTS PAGE
    ============================================================ */
+const PER_PAGE = 60;
+
 function renderFontsPage() {
-  const { search, category, sort } = state.fonts;
+  const { search, category, sort, page } = state.fonts;
   const cats = ['All', 'Serif', 'Sans-Serif', 'Display', 'Monospace', 'Handwriting'];
 
   let list = [...GOOGLE_FONTS];
@@ -2255,11 +2258,16 @@ function renderFontsPage() {
   if (sort === 'A–Z') list.sort((a, b) => a.name.localeCompare(b.name));
   else if (sort === 'Z–A') list.sort((a, b) => b.name.localeCompare(a.name));
 
+  const totalPages = Math.max(1, Math.ceil(list.length / PER_PAGE));
+  const currentPage = Math.min(page, totalPages);
+  const pageStart = (currentPage - 1) * PER_PAGE;
+  const paginated = list.slice(pageStart, pageStart + PER_PAGE);
+
   const tabs = cats.map(c =>
     `<button class="filter-tab ${c === category ? 'active' : ''}" data-cat="${h(c)}">${h(c)}</button>`
   ).join('');
 
-  const cards = list.map(f => {
+  const cards = paginated.map(f => {
     loadFont(f.name);
     const isLoaded = !!state.compare.fonts.find(cf => cf.name === f.name);
     return `
@@ -2278,11 +2286,21 @@ function renderFontsPage() {
       </div>`;
   }).join('') || `<p style="grid-column:1/-1;color:var(--text-muted);padding:48px 0">No fonts match "${h(search)}".</p>`;
 
+  const pagination = totalPages > 1 ? `
+    <div class="pagination">
+      <button class="page-btn" id="prevPage" ${currentPage === 1 ? 'disabled' : ''}>← Prev</button>
+      <span class="page-info">Page ${currentPage} of ${totalPages}</span>
+      <button class="page-btn" id="nextPage" ${currentPage === totalPages ? 'disabled' : ''}>Next →</button>
+    </div>` : '';
+
+  const countFrom = list.length ? pageStart + 1 : 0;
+  const countTo = Math.min(pageStart + PER_PAGE, list.length);
+
   return `
     <div class="gfonts-top">
       <div>
         <h1 class="page-title">Google Fonts</h1>
-        <div class="gfonts-count">${list.length} of ${GOOGLE_FONTS.length} fonts</div>
+        <div class="gfonts-count">Showing ${countFrom}–${countTo} of ${list.length} fonts</div>
       </div>
       <select class="styled" id="sortSel">
         <option ${sort === 'A–Z' ? 'selected' : ''}>A–Z</option>
@@ -2300,7 +2318,8 @@ function renderFontsPage() {
 
     <div class="filter-tabs" id="catTabs">${tabs}</div>
 
-    <div class="fonts-grid">${cards}</div>`;
+    <div class="fonts-grid">${cards}</div>
+    ${pagination}`;
 }
 
 function bindFontsPage() {
@@ -2309,20 +2328,35 @@ function bindFontsPage() {
     clearTimeout(searchEl._t);
     searchEl._t = setTimeout(() => {
       state.fonts.search = searchEl.value;
+      state.fonts.page = 1;
       render();
     }, 180);
   });
 
   document.getElementById('sortSel')?.addEventListener('change', e => {
     state.fonts.sort = e.target.value;
+    state.fonts.page = 1;
     render();
   });
 
   document.querySelectorAll('#catTabs .filter-tab').forEach(btn => {
     btn.addEventListener('click', () => {
       state.fonts.category = btn.dataset.cat;
+      state.fonts.page = 1;
       render();
     });
+  });
+
+  document.getElementById('prevPage')?.addEventListener('click', () => {
+    state.fonts.page--;
+    render();
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  });
+
+  document.getElementById('nextPage')?.addEventListener('click', () => {
+    state.fonts.page++;
+    render();
+    window.scrollTo({ top: 0, behavior: 'smooth' });
   });
 
   document.querySelectorAll('.font-card-add').forEach(btn => {
